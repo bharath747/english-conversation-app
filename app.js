@@ -15,22 +15,50 @@ const turns=[
  {prompt:'What is your favorite color?',te:'నీకు ఇష్టమైన రంగు ఏమిటి?',fallback:'My favorite color is blue.'},
  {prompt:'What do you like to play?',te:'నీకు ఏమి ఆడటం ఇష్టం?',fallback:'I like to play.'}
 ];
-let turnIndex=0, wordIndex=0, stars=0, gameScore=0, sound=true, recognition=null, listening=false;
+let turnIndex=0, wordIndex=0, stars=0, gameScore=0, sound=true, listening=false, mediaRecorder=null, audioChunks=[], recordTimer=null;
 const $=id=>document.getElementById(id);
-function speak(text){if(!sound||!('speechSynthesis'in window))return; speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text);u.lang='en-IN';u.rate=.82;u.pitch=1.08;speechSynthesis.speak(u)}
+function speak(text){if(!sound||!('speechSynthesis'in window))return;speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text);u.lang='en-IN';u.rate=.82;u.pitch=1.08;speechSynthesis.speak(u)}
 function addBubble(who,text,te=''){const el=document.createElement('div');el.className=`bubble ${who}`;el.innerHTML=`<b>${who==='sunny'?'Sunny':'You'}</b><br>${escapeHtml(text)}${te?`<small>${escapeHtml(te)}</small>`:''}`;$('conversation').appendChild(el);$('conversation').scrollTop=$('conversation').scrollHeight}
 function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]))}
 function setPrompt(){const t=turns[turnIndex%turns.length];$('promptText').textContent=t.prompt;$('promptTe').textContent=t.te;speak(t.prompt)}
 async function answer(text){if(!text)return;addBubble('child',text);$('statusText').textContent='Sunny is thinking…';const fallback=turns[turnIndex%turns.length].fallback;let reply='Nice! '+fallback;try{const r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:text,turn:turnIndex,history:[...$('conversation').querySelectorAll('.bubble')].slice(-8).map(x=>x.innerText)})});if(r.ok){const data=await r.json();if(data.reply)reply=data.reply}}catch(e){}addBubble('sunny',reply);speak(reply);stars++;$('stars').textContent=stars;turnIndex++;setPrompt();$('statusText').textContent='Tap the microphone and say your answer.';saveProgress()}
-function setListeningState(on){listening=on;$('micButton').classList.toggle('listening',on);$('micButton').setAttribute('aria-pressed',String(on));}
-function initSpeech(){const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){recognition=null;return false}recognition=new SR();recognition.lang='en-IN';recognition.interimResults=false;recognition.continuous=false;recognition.maxAlternatives=1;recognition.onstart=()=>{setListeningState(true);$('statusText').textContent='🎧 I am listening… Say a sentence!'};recognition.onend=()=>{setListeningState(false);if($('statusText').textContent.startsWith('🎧'))$('statusText').textContent='Tap the microphone and say your answer.'};recognition.onerror=e=>{setListeningState(false);const messages={not-allowed:'Microphone permission is blocked. Allow microphone access for this site.',service-not-allowed:'Voice input is not available here. Try Chrome on Android.',no-speech:'I did not hear you. Tap again and speak loudly.',audio-capture:'I cannot access the microphone. Check your phone microphone permission.'};$('statusText').textContent=messages[e.error]||`Voice input error: ${e.error}. Tap again.`};recognition.onresult=e=>{const text=e.results?.[0]?.[0]?.transcript||'';if(text)answer(text)};return true}
-async function startListening(){if(listening){try{recognition.stop()}catch(e){}return}if(!window.isSecureContext&&location.hostname!=='localhost'){$('statusText').textContent='Microphone needs a secure HTTPS connection.';return}if(!recognition&&!initSpeech()){$('statusText').textContent='🎙️ Voice input is not supported in this browser. Please open the app in Chrome on Android.';return}try{if(navigator.mediaDevices?.getUserMedia){$('statusText').textContent='🎙️ Starting microphone…';const stream=await navigator.mediaDevices.getUserMedia({audio:true});stream.getTracks().forEach(t=>t.stop())}recognition.start()}catch(e){setListeningState(false);if(e.name==='NotAllowedError'||e.name==='PermissionDeniedError')$('statusText').textContent='Microphone permission was denied. Allow microphone access in Chrome settings and try again.';else if(e.name==='InvalidStateError')$('statusText').textContent='Microphone is already starting. Please wait a moment.';else $('statusText').textContent='Could not start the microphone. Tap again.'}}
+function setListeningState(on){listening=on;$('micButton').classList.toggle('listening',on);$('micButton').setAttribute('aria-pressed',String(on));$('micButton').querySelector('small').textContent=on?'Tap to stop':'Tap & talk'}
+function getRecorderMime(){const options=['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/ogg;codecs=opus'];return options.find(x=>window.MediaRecorder?.isTypeSupported?.(x))||''}
+async function startListening(){
+ if(listening){stopListening();return}
+ if(!window.isSecureContext&&location.hostname!=='localhost'){$('statusText').textContent='Microphone needs a secure HTTPS connection.';return}
+ if(!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder){$('statusText').textContent='🎙️ Your browser cannot record audio. Please use Chrome on Android.';return}
+ try{
+  $('statusText').textContent='🎙️ Starting microphone…';
+  const stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}});
+  const mimeType=getRecorderMime();
+  mediaRecorder=new MediaRecorder(stream,mimeType?{mimeType}:undefined);
+  audioChunks=[];
+  mediaRecorder.ondataavailable=e=>{if(e.data&&e.data.size)audioChunks.push(e.data)};
+  mediaRecorder.onerror=()=>{stream.getTracks().forEach(t=>t.stop());setListeningState(false);$('statusText').textContent='I could not record your voice. Please try again.'};
+  mediaRecorder.onstop=async()=>{
+   clearTimeout(recordTimer);stream.getTracks().forEach(t=>t.stop());setListeningState(false);
+   const blob=new Blob(audioChunks,{type:mediaRecorder.mimeType||mimeType||'audio/webm'});
+   if(!blob.size){$('statusText').textContent='I did not hear you. Please try again.';return}
+   $('statusText').textContent='⏳ I am understanding your words…';
+   try{
+    const buffer=await blob.arrayBuffer();let binary='';const bytes=new Uint8Array(buffer);const chunk=0x8000;for(let i=0;i<bytes.length;i+=chunk)binary+=String.fromCharCode(...bytes.subarray(i,i+chunk));
+    const r=await fetch('/api/transcribe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({audio:btoa(binary),mimeType:blob.type||'audio/webm'})});
+    const data=await r.json();
+    if(!r.ok||!data.text){$('statusText').textContent=data.error||'I could not understand that. Try again.';return}
+    answer(data.text);
+   }catch(e){console.error(e);$('statusText').textContent='I could not understand the recording. Please try again.'}
+  };
+  mediaRecorder.start();setListeningState(true);$('statusText').textContent='🎧 I am listening… Say your sentence!';recordTimer=setTimeout(stopListening,8000);
+ }catch(e){setListeningState(false);if(e.name==='NotAllowedError'||e.name==='PermissionDeniedError')$('statusText').textContent='Microphone permission was denied. Allow microphone access for this site and try again.';else if(e.name==='NotFoundError')$('statusText').textContent='No microphone was found on this device.';else $('statusText').textContent='Could not start the microphone. Tap again.'}
+}
+function stopListening(){clearTimeout(recordTimer);if(mediaRecorder&&mediaRecorder.state!=='inactive')mediaRecorder.stop()}
 function renderWord(){const w=words[wordIndex%words.length];$('wordEnglish').textContent=w.en;$('wordTelugu').textContent=w.te;$('wordSentence').textContent=w.sentence;$('wordEmoji').textContent=w.emoji;$('compareTe').textContent=w.te;$('compareEn').textContent=w.en;$('playWord').onclick=()=>speak(w.sentence)}
 const gameItems=[{emoji:'🍎',correct:'apple',options:['apple','ball','book','water']},{emoji:'🐶',correct:'dog',options:['cat','dog','fish','bird']},{emoji:'💧',correct:'water',options:['milk','water','juice','rice']},{emoji:'⚽',correct:'ball',options:['book','ball','shoe','car']}];let gameIndex=0;
-function renderGame(){const g=gameItems[gameIndex%gameItems.length];$('gameEmoji').textContent=g.emoji;$('gameFeedback').textContent='Choose one!';$('choices').innerHTML='';g.options.forEach(o=>{const b=document.createElement('button');b.textContent=o;b.onclick=()=>{if(b.disabled)return;const ok=o===g.correct;b.classList.add(ok?'correct':'wrong');if(ok){gameScore++;stars++;$('gameFeedback').textContent='Great job! ⭐';$('gameScore').textContent=gameScore;$('stars').textContent=stars;speak(`Yes! ${o}.`);setTimeout(()=>{gameIndex++;renderGame()},650)}else{$('gameFeedback').textContent=`Almost! Try again.`;speak('Try again.')}};$('choices').appendChild(b)})}
+function renderGame(){const g=gameItems[gameIndex%gameItems.length];$('gameEmoji').textContent=g.emoji;$('gameFeedback').textContent='Choose one!';$('choices').innerHTML='';g.options.forEach(o=>{const b=document.createElement('button');b.textContent=o;b.onclick=()=>{if(b.disabled)return;const ok=o===g.correct;b.classList.add(ok?'correct':'wrong');if(ok){gameScore++;stars++;$('gameFeedback').textContent='Great job! ⭐';$('gameScore').textContent=gameScore;$('stars').textContent=stars;speak(`Yes! ${o}.`);setTimeout(()=>{gameIndex++;renderGame()},650)}else{$('gameFeedback').textContent='Almost! Try again.';speak('Try again.')}};$('choices').appendChild(b)})}
 function saveProgress(){localStorage.setItem('littleEnglishProgress',JSON.stringify({stars,gameScore,turnIndex}))}
 function loadProgress(){try{const p=JSON.parse(localStorage.getItem('littleEnglishProgress')||'{}');stars=p.stars||0;gameScore=p.gameScore||0;turnIndex=p.turnIndex||0}catch(e){}$('stars').textContent=stars;$('gameScore').textContent=gameScore}
 document.querySelectorAll('.mode').forEach(btn=>btn.onclick=()=>{document.querySelectorAll('.mode').forEach(x=>x.classList.remove('active'));btn.classList.add('active');['talk','learn','games'].forEach(m=>$(m+'Panel').classList.toggle('hidden',m!==btn.dataset.mode));if(btn.dataset.mode==='learn')renderWord();if(btn.dataset.mode==='games')renderGame()});
 $('micButton').addEventListener('click',startListening);$('micButton').addEventListener('touchend',e=>{e.preventDefault();startListening()},{passive:false});$('nextWord').onclick=()=>{wordIndex++;renderWord()};document.querySelectorAll('[data-say]').forEach(b=>b.onclick=()=>answer(b.dataset.say));$('soundToggle').onclick=()=>{sound=!sound;$('soundToggle').textContent=sound?'🔊':'🔇';if(sound)speak('Sound on')};
-loadProgress();initSpeech();setPrompt();renderWord();renderGame();addBubble('sunny','Hello! I am Sunny. Let us speak English together!','హలో! మనం కలిసి ఇంగ్లీష్ మాట్లాడుదాం!');
+loadProgress();setPrompt();renderWord();renderGame();addBubble('sunny','Hello! I am Sunny. Let us speak English together!','హలో! మనం కలిసి ఇంగ్లీష్ మాట్లాడుదాం!');
 if('serviceWorker'in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('/service-worker.js').catch(()=>{}));
