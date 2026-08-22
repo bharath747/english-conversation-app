@@ -1,11 +1,232 @@
-let lessonIndex=0,soundOn=true,gameIndex=0,gameScore=0;
-function $(id){return document.getElementById(id)}
-function speak(text,lang){if(!soundOn||!window.speechSynthesis)return;speechSynthesis.cancel();var u=new SpeechSynthesisUtterance(text);u.lang=lang||'en-IN';u.rate=.8;window.speechSynthesis.speak(u)}
-function lessons(){return window.LITTLE_ENGLISH_LESSONS||[]}
-function renderLesson(){var list=lessons();if(!list.length)return;lessonIndex=(lessonIndex+list.length)%list.length;var w=list[lessonIndex];$('wordEnglish').textContent=w[0];$('wordTelugu').textContent=w[1];$('wordSentence').textContent=w[2];$('wordTeluguSentence').textContent=w[3];$('wordEmoji').textContent=w[4];$('compareTe').textContent=w[1];$('compareEn').textContent=w[0];$('lessonProgress').textContent='Lesson '+(lessonIndex+1)+' of '+list.length}
-function showMode(name){['talk','learn','games'].forEach(function(x){$(x+'Panel').classList.toggle('hidden',x!==name)});document.querySelectorAll('.mode').forEach(function(b){b.classList.toggle('active',b.getAttribute('data-mode')===name)});if(name==='learn')renderLesson();if(name==='games')renderGame()}
-function talk(text){var c=$('conversation'),d=document.createElement('div'),s=document.createElement('div');d.className='bubble child';d.textContent='You: '+text;s.className='bubble sunny';s.textContent='Sunny: Nice! '+text;c.appendChild(d);c.appendChild(s);c.scrollTop=c.scrollHeight;speak('Nice! '+text,'en-IN')}
-function mic(){if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){$('statusText').textContent='Microphone is not available. Use a quick answer.';return}navigator.mediaDevices.getUserMedia({audio:true}).then(function(stream){stream.getTracks().forEach(function(t){t.stop()});$('statusText').textContent='Microphone is ready.'}).catch(function(){$('statusText').textContent='Please allow microphone access.'})}
-function renderGame(){var list=window.UKG_GAME_WORDS||[];if(!list.length)return;var word=list[gameIndex%list.length];var emoji=(window.UKG_GAME_EMOJI||{})[word]||'❓';$('gameEmoji').textContent=emoji;$('gameFeedback').textContent='What is this?';$('choices').innerHTML='';var choices=[word];while(choices.length<4){var other=list[Math.floor(Math.random()*list.length)];if(choices.indexOf(other)<0)choices.push(other)}choices.sort(function(){return Math.random()-.5});choices.forEach(function(x){var b=document.createElement('button');b.type='button';b.textContent=x;b.onclick=function(){if(x===word){$('gameFeedback').textContent='Great job! ⭐';gameScore++;$('gameScore').textContent=gameScore;speak('Great job! '+x,'en-IN');setTimeout(function(){gameIndex++;renderGame()},500)}else{$('gameFeedback').textContent='Try again!';speak('Try again','en-IN')}};$('choices').appendChild(b)})}
-function init(){document.querySelectorAll('.mode').forEach(function(b){b.onclick=function(){showMode(b.getAttribute('data-mode'))}});$('nextWord').onclick=function(){lessonIndex++;renderLesson()};$('prevWord').onclick=function(){lessonIndex--;renderLesson()};$('playEnglish').onclick=function(){var list=lessons();if(list.length)speak(list[lessonIndex][2],'en-IN')};$('playTelugu').onclick=function(){var list=lessons();if(list.length)speak(list[lessonIndex][3],'te-IN')};$('soundToggle').onclick=function(){soundOn=!soundOn;$('soundToggle').textContent=soundOn?'🔊':'🔇'};document.querySelectorAll('[data-say]').forEach(function(b){b.onclick=function(){talk(b.getAttribute('data-say'))}});$('micButton').onclick=mic;renderLesson();renderGame()}
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
+(function () {
+  'use strict';
+
+  var state = { lesson: 0, game: 0, score: 0, sound: true, recognition: null, listening: false };
+
+  function el(id) { return document.getElementById(id); }
+  function all(selector) { return Array.prototype.slice.call(document.querySelectorAll(selector)); }
+  function lessons() {
+    var source = Array.isArray(window.LITTLE_ENGLISH_LESSONS) ? window.LITTLE_ENGLISH_LESSONS : [];
+    var seen = {};
+    return source.filter(function (item) {
+      if (!item || item.length < 5) return false;
+      var key = String(item[0]).toLowerCase() + '|' + String(item[1]);
+      if (seen[key]) return false;
+      seen[key] = true;
+      return true;
+    });
+  }
+  function gameWords() { return Array.isArray(window.UKG_GAME_WORDS) ? window.UKG_GAME_WORDS : []; }
+
+  function speak(text, lang) {
+    if (!state.sound || !('speechSynthesis' in window) || !text) return;
+    try {
+      window.speechSynthesis.cancel();
+      var utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = lang || 'en-IN';
+      utterance.rate = 0.78;
+      utterance.pitch = 1.05;
+      window.speechSynthesis.speak(utterance);
+    } catch (_) {}
+  }
+
+  function setStatus(text) { if (el('statusText')) el('statusText').textContent = text; }
+
+  function renderLesson() {
+    var list = lessons();
+    if (!list.length) {
+      el('learnEmpty').classList.remove('hidden');
+      el('learnContent').classList.add('hidden');
+      return;
+    }
+    el('learnEmpty').classList.add('hidden');
+    el('learnContent').classList.remove('hidden');
+    state.lesson = (state.lesson + list.length) % list.length;
+    var item = list[state.lesson];
+    el('wordEnglish').textContent = item[0];
+    el('wordTelugu').textContent = item[1];
+    el('wordSentence').textContent = item[2];
+    el('wordTeluguSentence').textContent = item[3];
+    el('wordEmoji').textContent = item[4];
+    el('compareTe').textContent = item[1];
+    el('compareEn').textContent = item[0];
+    el('lessonProgress').textContent = 'Lesson ' + (state.lesson + 1) + ' of ' + list.length;
+    el('lessonBar').style.width = (((state.lesson + 1) / list.length) * 100).toFixed(1) + '%';
+    el('lessonSelect').value = String(state.lesson);
+  }
+
+  function populateLessonSelect() {
+    var select = el('lessonSelect');
+    var list = lessons();
+    select.innerHTML = '';
+    list.forEach(function (item, index) {
+      var option = document.createElement('option');
+      option.value = String(index);
+      option.textContent = (index + 1) + '. ' + item[0] + ' — ' + item[1];
+      select.appendChild(option);
+    });
+  }
+
+  function showMode(name) {
+    ['talk', 'learn', 'games'].forEach(function (mode) {
+      el(mode + 'Panel').classList.toggle('hidden', mode !== name);
+    });
+    all('.mode').forEach(function (button) {
+      button.classList.toggle('active', button.getAttribute('data-mode') === name);
+    });
+    if (name === 'learn') renderLesson();
+    if (name === 'games') renderGame();
+  }
+
+  function addBubble(text, type) {
+    var conversation = el('conversation');
+    var bubble = document.createElement('div');
+    bubble.className = 'bubble ' + type;
+    bubble.textContent = text;
+    conversation.appendChild(bubble);
+    conversation.scrollTop = conversation.scrollHeight;
+  }
+
+  function answerTo(text) {
+    var value = text.toLowerCase().trim();
+    var reply = 'That is nice! Can you say it again in English?';
+    if (/^(hi|hello|hey)/.test(value)) reply = 'Hello! How are you today?';
+    else if (/name/.test(value)) reply = 'Nice to meet you! My name is Sunny.';
+    else if (/happy|good|fine/.test(value)) reply = 'Wonderful! I am happy too!';
+    else if (/water|thirsty/.test(value)) reply = 'Sure! You can say: I want water.';
+    else if (/apple|banana|mango|food|eat/.test(value)) reply = 'Yummy! You can say: I like apples.';
+    else if (/mother|mom|mummy|father|dad|daddy/.test(value)) reply = 'Very good! Tell me more about your family.';
+    else if (/school|teacher|book|read/.test(value)) reply = 'Great! I love learning too.';
+    else if (/play|ball|toy|game/.test(value)) reply = 'That sounds fun! What do you want to play?';
+    else if (/thank/.test(value)) reply = 'You are welcome!';
+    return reply;
+  }
+
+  function handleSpeech(text) {
+    if (!text) return;
+    addBubble('You: ' + text, 'child');
+    var reply = answerTo(text);
+    addBubble('Sunny: ' + reply, 'sunny');
+    speak(reply, 'en-IN');
+  }
+
+  function stopRecognition() {
+    if (state.recognition) {
+      try { state.recognition.stop(); } catch (_) {}
+    }
+    state.listening = false;
+    el('micButton').classList.remove('listening');
+    el('micLabel').textContent = 'Tap & talk';
+  }
+
+  function startRecognition() {
+    var Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!Recognition) {
+      setStatus('Voice recognition is not supported in this browser. Use the example buttons below.');
+      return;
+    }
+    if (state.listening) { stopRecognition(); return; }
+    var recognition = new Recognition();
+    state.recognition = recognition;
+    recognition.lang = 'en-IN';
+    recognition.interimResults = false;
+    recognition.continuous = false;
+    recognition.onstart = function () {
+      state.listening = true;
+      el('micButton').classList.add('listening');
+      el('micLabel').textContent = 'Listening…';
+      setStatus('I am listening. Say a short English sentence.');
+    };
+    recognition.onresult = function (event) {
+      var transcript = event.results[0][0].transcript;
+      setStatus('I heard: “' + transcript + '”');
+      handleSpeech(transcript);
+    };
+    recognition.onerror = function (event) {
+      var message = event.error === 'not-allowed' ? 'Please allow microphone access.' : 'I could not hear you. Try again.';
+      setStatus(message);
+    };
+    recognition.onend = stopRecognition;
+    try { recognition.start(); } catch (_) { setStatus('Tap the microphone again.'); }
+  }
+
+  function renderGame() {
+    var words = gameWords();
+    if (!words.length) return;
+    var answer = words[state.game % words.length];
+    var emojiMap = window.UKG_GAME_EMOJI || {};
+    el('gameEmoji').textContent = emojiMap[answer] || '❓';
+    el('gameWordHint').textContent = 'What is this?';
+    el('gameFeedback').textContent = 'Choose the English word.';
+    var choices = [answer];
+    while (choices.length < 4 && choices.length < words.length) {
+      var candidate = words[Math.floor(Math.random() * words.length)];
+      if (choices.indexOf(candidate) === -1) choices.push(candidate);
+    }
+    choices.sort(function () { return Math.random() - 0.5; });
+    var container = el('choices');
+    container.innerHTML = '';
+    choices.forEach(function (choice) {
+      var button = document.createElement('button');
+      button.type = 'button';
+      button.textContent = choice;
+      button.addEventListener('click', function () {
+        if (choice === answer) {
+          button.classList.add('correct');
+          el('gameFeedback').textContent = 'Great job! ⭐';
+          state.score += 1;
+          el('gameScore').textContent = state.score;
+          speak('Great job! ' + choice, 'en-IN');
+          window.setTimeout(function () { state.game += 1; renderGame(); }, 650);
+        } else {
+          button.classList.add('wrong');
+          el('gameFeedback').textContent = 'Try again!';
+          speak('Try again', 'en-IN');
+        }
+      });
+      container.appendChild(button);
+    });
+  }
+
+  function registerPwa() {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/service-worker.js').catch(function () {});
+    }
+  }
+
+  function init() {
+    try {
+      populateLessonSelect();
+      renderLesson();
+      renderGame();
+      all('.mode').forEach(function (button) {
+        button.addEventListener('click', function () { showMode(button.getAttribute('data-mode')); });
+      });
+      el('nextWord').addEventListener('click', function () { state.lesson += 1; renderLesson(); });
+      el('prevWord').addEventListener('click', function () { state.lesson -= 1; renderLesson(); });
+      el('lessonSelect').addEventListener('change', function () { state.lesson = Number(this.value) || 0; renderLesson(); });
+      el('playEnglish').addEventListener('click', function () { var list = lessons(); if (list.length) speak(list[state.lesson][2], 'en-IN'); });
+      el('playTelugu').addEventListener('click', function () { var list = lessons(); if (list.length) speak(list[state.lesson][3], 'te-IN'); });
+      el('soundToggle').addEventListener('click', function () { state.sound = !state.sound; this.textContent = state.sound ? '🔊' : '🔇'; if (!state.sound) window.speechSynthesis && window.speechSynthesis.cancel(); });
+      el('micButton').addEventListener('click', startRecognition);
+      all('[data-say]').forEach(function (button) { button.addEventListener('click', function () { handleSpeech(button.getAttribute('data-say')); }); });
+      el('clearConversation').addEventListener('click', function () { el('conversation').innerHTML = ''; });
+      el('nextGame').addEventListener('click', function () { state.game += 1; renderGame(); });
+      el('errorReload').addEventListener('click', function () { window.location.reload(); });
+      registerPwa();
+    } catch (error) {
+      el('fatalError').classList.remove('hidden');
+      el('fatalMessage').textContent = 'The app could not start. Please reload this page.';
+      console.error(error);
+    }
+  }
+
+  window.addEventListener('error', function () {
+    el('fatalError').classList.remove('hidden');
+  });
+  window.addEventListener('unhandledrejection', function () {
+    el('fatalError').classList.remove('hidden');
+  });
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
+})();
