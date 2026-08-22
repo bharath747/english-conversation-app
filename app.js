@@ -1,64 +1,45 @@
 const words=[
- {en:'happy',te:'సంతోషంగా',sentence:'I am happy.',teSentence:'నేను సంతోషంగా ఉన్నాను.',emoji:'😊'},
- {en:'water',te:'నీరు',sentence:'I want water.',teSentence:'నాకు నీళ్లు కావాలి.',emoji:'💧'},
- {en:'apple',te:'ఆపిల్',sentence:'I like apples.',teSentence:'నాకు ఆపిల్స్ ఇష్టం.',emoji:'🍎'},
- {en:'ball',te:'బంతి',sentence:'This is my ball.',teSentence:'ఇది నా బంతి.',emoji:'⚽'},
- {en:'book',te:'పుస్తకం',sentence:'I am reading a book.',teSentence:'నేను పుస్తకం చదువుతున్నాను.',emoji:'📖'},
- {en:'sleep',te:'నిద్ర',sentence:'I want to sleep.',teSentence:'నాకు నిద్ర కావాలి.',emoji:'😴'},
- {en:'home',te:'ఇల్లు',sentence:'I am at home.',teSentence:'నేను ఇంట్లో ఉన్నాను.',emoji:'🏠'},
- {en:'play',te:'ఆడటం',sentence:'I want to play.',teSentence:'నాకు ఆడాలని ఉంది.',emoji:'🛝'}
+{en:'happy',te:'సంతోషంగా',sentence:'I am happy.',teSentence:'నేను సంతోషంగా ఉన్నాను.',emoji:'😊'},
+{en:'water',te:'నీరు',sentence:'I want water.',teSentence:'నాకు నీళ్లు కావాలి.',emoji:'💧'},
+{en:'apple',te:'ఆపిల్',sentence:'I like apples.',teSentence:'నాకు ఆపిల్స్ ఇష్టం.',emoji:'🍎'},
+{en:'ball',te:'బంతి',sentence:'This is my ball.',teSentence:'ఇది నా బంతి.',emoji:'⚽'},
+{en:'book',te:'పుస్తకం',sentence:'I am reading a book.',teSentence:'నేను పుస్తకం చదువుతున్నాను.',emoji:'📖'},
+{en:'sleep',te:'నిద్ర',sentence:'I want to sleep.',teSentence:'నాకు నిద్ర కావాలి.',emoji:'😴'},
+{en:'home',te:'ఇల్లు',sentence:'I am at home.',teSentence:'నేను ఇంట్లో ఉన్నాను.',emoji:'🏠'},
+{en:'play',te:'ఆడటం',sentence:'I want to play.',teSentence:'నాకు ఆడాలని ఉంది.',emoji:'🛝'},
+{en:'mother',te:'అమ్మ',sentence:'This is my mother.',teSentence:'ఇది నా అమ్మ.',emoji:'👩'},
+{en:'father',te:'నాన్న',sentence:'This is my father.',teSentence:'ఇది నా నాన్న.',emoji:'👨'},
+{en:'school',te:'పాఠశాల',sentence:'I go to school.',teSentence:'నేను పాఠశాలకు వెళ్తాను.',emoji:'🏫'},
+{en:'friend',te:'స్నేహితుడు',sentence:'He is my friend.',teSentence:'అతను నా స్నేహితుడు.',emoji:'🧒'},
+{en:'toy',te:'బొమ్మ',sentence:'This is my toy.',teSentence:'ఇది నా బొమ్మ.',emoji:'🧸'},
+{en:'milk',te:'పాలు',sentence:'I drink milk.',teSentence:'నేను పాలు తాగుతాను.',emoji:'🥛'},
+{en:'food',te:'ఆహారం',sentence:'The food is tasty.',teSentence:'ఆహారం రుచిగా ఉంది.',emoji:'🍚'},
+{en:'house',te:'ఇల్లు',sentence:'My house is big.',teSentence:'నా ఇల్లు పెద్దది.',emoji:'🏡'},
+{en:'sun',te:'సూర్యుడు',sentence:'The sun is bright.',teSentence:'సూర్యుడు ప్రకాశంగా ఉన్నాడు.',emoji:'☀️'},
+{en:'moon',te:'చంద్రుడు',sentence:'I can see the moon.',teSentence:'నేను చంద్రుడిని చూడగలను.',emoji:'🌙'},
+{en:'dog',te:'కుక్క',sentence:'The dog is running.',teSentence:'కుక్క పరుగెడుతోంది.',emoji:'🐶'},
+{en:'cat',te:'పిల్లి',sentence:'The cat is sleeping.',teSentence:'పిల్లి నిద్రపోతోంది.',emoji:'🐱'}
 ];
 const turns=[
- {prompt:'What is your name?',te:'నీ పేరు ఏమిటి?',fallback:'My name is my friend.'},
- {prompt:'How are you today?',te:'ఈ రోజు నువ్వు ఎలా ఉన్నావు?',fallback:'I am happy today.'},
- {prompt:'What do you like to eat?',te:'నీకు ఏమి తినడం ఇష్టం?',fallback:'I like apples.'},
- {prompt:'What is your favorite color?',te:'నీకు ఇష్టమైన రంగు ఏమిటి?',fallback:'My favorite color is blue.'},
- {prompt:'What do you like to play?',te:'నీకు ఏమి ఆడటం ఇష్టం?',fallback:'I like to play.'}
+{prompt:'What is your name?',te:'నీ పేరు ఏమిటి?',fallback:'My name is my friend.'},
+{prompt:'How are you today?',te:'ఈ రోజు నువ్వు ఎలా ఉన్నావు?',fallback:'I am happy today.'},
+{prompt:'What do you like to eat?',te:'నీకు ఏమి తినడం ఇష్టం?',fallback:'I like apples.'},
+{prompt:'What is your favorite color?',te:'నీకు ఇష్టమైన రంగు ఏమిటి?',fallback:'My favorite color is blue.'},
+{prompt:'What do you like to play?',te:'నీకు ఏమి ఆడటం ఇష్టం?',fallback:'I like to play.'}
 ];
-let turnIndex=0, wordIndex=0, stars=0, gameScore=0, sound=true, listening=false, mediaRecorder=null, audioChunks=[], recordTimer=null;
+let turnIndex=0,wordIndex=0,stars=0,gameScore=0,sound=true,listening=false,mediaRecorder=null,audioChunks=[],recordTimer=null;
 const $=id=>document.getElementById(id);
 function speak(text){if(!sound||!('speechSynthesis'in window))return;speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text);u.lang='en-IN';u.rate=.82;u.pitch=1.08;speechSynthesis.speak(u)}
 function addBubble(who,text,te=''){const el=document.createElement('div');el.className=`bubble ${who}`;el.innerHTML=`<b>${who==='sunny'?'Sunny':'You'}</b><br>${escapeHtml(text)}${te?`<small>${escapeHtml(te)}</small>`:''}`;$('conversation').appendChild(el);$('conversation').scrollTop=$('conversation').scrollHeight}
-function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]))}
+function escapeHtml(s){return String(s).replace(/[&<>\"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#039;'}[c]))}
 function setPrompt(){const t=turns[turnIndex%turns.length];$('promptText').textContent=t.prompt;$('promptTe').textContent=t.te;speak(t.prompt)}
 async function answer(text){if(!text)return;addBubble('child',text);$('statusText').textContent='Sunny is thinking…';const fallback=turns[turnIndex%turns.length].fallback;let reply='Nice! '+fallback;try{const r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:text,turn:turnIndex,history:[...$('conversation').querySelectorAll('.bubble')].slice(-8).map(x=>x.innerText)})});if(r.ok){const data=await r.json();if(data.reply)reply=data.reply}}catch(e){}addBubble('sunny',reply);speak(reply);stars++;$('stars').textContent=stars;turnIndex++;setPrompt();$('statusText').textContent='Tap the microphone and say your answer.';saveProgress()}
 function setListeningState(on){listening=on;$('micButton').classList.toggle('listening',on);$('micButton').setAttribute('aria-pressed',String(on));$('micButton').querySelector('small').textContent=on?'Tap to stop':'Tap & talk'}
-function getRecorderMime(){const options=['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/ogg;codecs=opus'];return options.find(x=>window.MediaRecorder?.isTypeSupported?.(x))||''}
-async function startListening(){
- if(listening){stopListening();return}
- if(!window.isSecureContext&&location.hostname!=='localhost'){$('statusText').textContent='Microphone needs a secure HTTPS connection.';return}
- if(!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder){$('statusText').textContent='🎙️ Your browser cannot record audio. Please use Chrome on Android.';return}
- try{
-  $('statusText').textContent='🎙️ Starting microphone…';
-  const stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}});
-  const mimeType=getRecorderMime();
-  mediaRecorder=new MediaRecorder(stream,mimeType?{mimeType}:undefined);
-  audioChunks=[];
-  mediaRecorder.ondataavailable=e=>{if(e.data&&e.data.size)audioChunks.push(e.data)};
-  mediaRecorder.onerror=()=>{stream.getTracks().forEach(t=>t.stop());setListeningState(false);$('statusText').textContent='I could not record your voice. Please try again.'};
-  mediaRecorder.onstop=async()=>{
-   clearTimeout(recordTimer);stream.getTracks().forEach(t=>t.stop());setListeningState(false);
-   const blob=new Blob(audioChunks,{type:mediaRecorder.mimeType||mimeType||'audio/webm'});
-   if(!blob.size){$('statusText').textContent='I did not hear you. Please try again.';return}
-   $('statusText').textContent='⏳ I am understanding your words…';
-   try{
-    const buffer=await blob.arrayBuffer();let binary='';const bytes=new Uint8Array(buffer);const chunk=0x8000;for(let i=0;i<bytes.length;i+=chunk)binary+=String.fromCharCode(...bytes.subarray(i,i+chunk));
-    const r=await fetch('/api/transcribe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({audio:btoa(binary),mimeType:blob.type||'audio/webm'})});
-    const data=await r.json();
-    if(!r.ok||!data.text){$('statusText').textContent=data.error||'I could not understand that. Try again.';return}
-    answer(data.text);
-   }catch(e){console.error(e);$('statusText').textContent='I could not understand the recording. Please try again.'}
-  };
-  mediaRecorder.start();setListeningState(true);$('statusText').textContent='🎧 I am listening… Say your sentence!';recordTimer=setTimeout(stopListening,8000);
- }catch(e){setListeningState(false);if(e.name==='NotAllowedError'||e.name==='PermissionDeniedError')$('statusText').textContent='Microphone permission was denied. Allow microphone access for this site and try again.';else if(e.name==='NotFoundError')$('statusText').textContent='No microphone was found on this device.';else $('statusText').textContent='Could not start the microphone. Tap again.'}
-}
+function getRecorderMime(){return ['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/ogg;codecs=opus'].find(x=>window.MediaRecorder?.isTypeSupported?.(x))||''}
+async function startListening(){if(listening){stopListening();return}if(!window.isSecureContext&&location.hostname!=='localhost'){$('statusText').textContent='Microphone needs a secure HTTPS connection.';return}if(!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder){$('statusText').textContent='🎙️ Your browser cannot record audio. Please use Chrome on Android.';return}try{$('statusText').textContent='🎙️ Starting microphone…';const stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}});const mimeType=getRecorderMime();mediaRecorder=new MediaRecorder(stream,mimeType?{mimeType}:undefined);audioChunks=[];mediaRecorder.ondataavailable=e=>{if(e.data&&e.data.size)audioChunks.push(e.data)};mediaRecorder.onerror=()=>{stream.getTracks().forEach(t=>t.stop());setListeningState(false);$('statusText').textContent='I could not record your voice. Please try again.'};mediaRecorder.onstop=async()=>{clearTimeout(recordTimer);stream.getTracks().forEach(t=>t.stop());setListeningState(false);const blob=new Blob(audioChunks,{type:mediaRecorder.mimeType||mimeType||'audio/webm'});if(!blob.size){$('statusText').textContent='I did not hear you. Please try again.';return}$('statusText').textContent='⏳ I am understanding your words…';try{const buffer=await blob.arrayBuffer();let binary='';const bytes=new Uint8Array(buffer);for(let i=0;i<bytes.length;i+=0x8000)binary+=String.fromCharCode(...bytes.subarray(i,i+0x8000));const r=await fetch('/api/transcribe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({audio:btoa(binary),mimeType:blob.type||'audio/webm'})});const data=await r.json();if(!r.ok||!data.text){$('statusText').textContent=data.error||'I could not understand that. Try again.';return}answer(data.text)}catch(e){$('statusText').textContent='I could not understand the recording. Please try again.'}};mediaRecorder.start();setListeningState(true);$('statusText').textContent='🎧 I am listening… Say your sentence!';recordTimer=setTimeout(stopListening,8000)}catch(e){setListeningState(false);$('statusText').textContent=e.name==='NotAllowedError'?'Microphone permission was denied. Allow microphone access for this site and try again.':e.name==='NotFoundError'?'No microphone was found on this device.':'Could not start the microphone. Tap again.'}}
 function stopListening(){clearTimeout(recordTimer);if(mediaRecorder&&mediaRecorder.state!=='inactive')mediaRecorder.stop()}
-function renderWord(){const w=words[wordIndex%words.length];$('wordEnglish').textContent=w.en;$('wordTelugu').textContent=w.te;$('wordSentence').textContent=w.sentence;$('wordEmoji').textContent=w.emoji;$('compareTe').textContent=w.te;$('compareEn').textContent=w.en;$('playWord').onclick=()=>speak(w.sentence)}
+function renderWord(){const w=words[wordIndex%words.length];$('wordEnglish').textContent=w.en;$('wordTelugu').textContent=w.te;$('wordSentence').textContent=w.sentence;$('wordEmoji').textContent=w.emoji;$('compareTe').textContent=w.te;$('compareEn').textContent=w.en;$('playWord').onclick=()=>speak(`${w.en}. ${w.sentence}`)}
 const gameItems=[{emoji:'🍎',correct:'apple',options:['apple','ball','book','water']},{emoji:'🐶',correct:'dog',options:['cat','dog','fish','bird']},{emoji:'💧',correct:'water',options:['milk','water','juice','rice']},{emoji:'⚽',correct:'ball',options:['book','ball','shoe','car']}];let gameIndex=0;
 function renderGame(){const g=gameItems[gameIndex%gameItems.length];$('gameEmoji').textContent=g.emoji;$('gameFeedback').textContent='Choose one!';$('choices').innerHTML='';g.options.forEach(o=>{const b=document.createElement('button');b.textContent=o;b.onclick=()=>{if(b.disabled)return;const ok=o===g.correct;b.classList.add(ok?'correct':'wrong');if(ok){gameScore++;stars++;$('gameFeedback').textContent='Great job! ⭐';$('gameScore').textContent=gameScore;$('stars').textContent=stars;speak(`Yes! ${o}.`);setTimeout(()=>{gameIndex++;renderGame()},650)}else{$('gameFeedback').textContent='Almost! Try again.';speak('Try again.')}};$('choices').appendChild(b)})}
-function saveProgress(){localStorage.setItem('littleEnglishProgress',JSON.stringify({stars,gameScore,turnIndex}))}
-function loadProgress(){try{const p=JSON.parse(localStorage.getItem('littleEnglishProgress')||'{}');stars=p.stars||0;gameScore=p.gameScore||0;turnIndex=p.turnIndex||0}catch(e){}$('stars').textContent=stars;$('gameScore').textContent=gameScore}
-document.querySelectorAll('.mode').forEach(btn=>btn.onclick=()=>{document.querySelectorAll('.mode').forEach(x=>x.classList.remove('active'));btn.classList.add('active');['talk','learn','games'].forEach(m=>$(m+'Panel').classList.toggle('hidden',m!==btn.dataset.mode));if(btn.dataset.mode==='learn')renderWord();if(btn.dataset.mode==='games')renderGame()});
-$('micButton').addEventListener('click',startListening);$('micButton').addEventListener('touchend',e=>{e.preventDefault();startListening()},{passive:false});$('nextWord').onclick=()=>{wordIndex++;renderWord()};document.querySelectorAll('[data-say]').forEach(b=>b.onclick=()=>answer(b.dataset.say));$('soundToggle').onclick=()=>{sound=!sound;$('soundToggle').textContent=sound?'🔊':'🔇';if(sound)speak('Sound on')};
-loadProgress();setPrompt();renderWord();renderGame();addBubble('sunny','Hello! I am Sunny. Let us speak English together!','హలో! మనం కలిసి ఇంగ్లీష్ మాట్లాడుదాం!');
-if('serviceWorker'in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('/service-worker.js').catch(()=>{}));
+function saveProgress(){localStorage.setItem('littleEnglishProgress',JSON.stringify({stars,gameScore,turnIndex}))}function loadProgress(){try{const p=JSON.parse(localStorage.getItem('littleEnglishProgress')||'{}');stars=p.stars||0;gameScore=p.gameScore||0;turnIndex=p.turnIndex||0}catch(e){}$('stars').textContent=stars;$('gameScore').textContent=gameScore)}
+document.querySelectorAll('.mode').forEach(btn=>btn.onclick=()=>{document.querySelectorAll('.mode').forEach(x=>x.classList.remove('active'));btn.classList.add('active');['talk','learn','games'].forEach(m=>$(m+'Panel').classList.toggle('hidden',m!==btn.dataset.mode));if(btn.dataset.mode==='learn')renderWord();if(btn.dataset.mode==='games')renderGame()});$('micButton').addEventListener('click',startListening);$('micButton').addEventListener('touchend',e=>{e.preventDefault();startListening()},{passive:false});$('nextWord').onclick=()=>{wordIndex++;renderWord()};document.querySelectorAll('[data-say]').forEach(b=>b.onclick=()=>answer(b.dataset.say));$('soundToggle').onclick=()=>{sound=!sound;$('soundToggle').textContent=sound?'🔊':'🔇';if(sound)speak('Sound on')};loadProgress();setPrompt();renderWord();renderGame();addBubble('sunny','Hello! I am Sunny. Let us speak English together!','హలో! మనం కలిసి ఇంగ్లీష్ మాట్లాడుదాం!');if('serviceWorker'in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('/service-worker.js').catch(()=>{}));
