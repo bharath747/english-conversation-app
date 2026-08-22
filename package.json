@@ -1,0 +1,12 @@
+{
+  "name": "little-english-friends",
+  "version": "1.0.0",
+  "private": true,
+  "description": "A child-friendly Telugu-to-English conversation PWA for early learners.",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "openai": "latest"
+  }
+}
