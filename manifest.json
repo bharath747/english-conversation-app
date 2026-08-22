@@ -1,0 +1,11 @@
+{
+  "name": "Little English Friends",
+  "short_name": "English Friends",
+  "description": "A playful Telugu-to-English conversation buddy for young learners.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f5f7ff",
+  "theme_color": "#5b5ce2",
+  "orientation": "portrait-primary",
+  "icons": [{"src":"/icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]
+}
