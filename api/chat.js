@@ -36,9 +36,9 @@ ${context || '(start of conversation)'}
 
 Answer the child now.`;
 
-    // gemini-2.5-flash gives reliable complete short responses for this simple conversation flow.
-    // Keep the model configurable through Vercel, but use this stable default.
-    const primaryModel = process.env.GEMINI_CHAT_MODEL || 'gemini-2.5-flash';
+    // The API explicitly reports that Gemini 2.5 Flash is unavailable for this new API key.
+    // Gemini 3.6 Flash is the provider-recommended replacement.
+    const primaryModel = process.env.GEMINI_CHAT_MODEL || 'gemini-3.6-flash';
 
     async function generate(model) {
       const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
@@ -46,7 +46,7 @@ Answer the child now.`;
         headers: { 'Content-Type': 'application/json', 'x-goog-api-key': process.env.GEMINI_API_KEY },
         body: JSON.stringify({
           contents: [{ role: 'user', parts: [{ text: prompt }] }],
-          generationConfig: { maxOutputTokens: 256, temperature: 0.5 }
+          generationConfig: { maxOutputTokens: 512, temperature: 0.5 }
         })
       });
       const raw = await response.text();
